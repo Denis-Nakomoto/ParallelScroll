@@ -11,7 +11,7 @@ import SwiftUI
 struct ParallelScrollApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ScrollsView()
         }
     }
 }
