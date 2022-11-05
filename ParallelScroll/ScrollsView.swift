@@ -13,15 +13,15 @@ struct ScrollsView: View {
     
     var body: some View {
         VStack {
-            topScroll()
+            blocksScroll()
                 .padding(.top, 30)
-            bottomScroll()
+            cardsScroll()
             Spacer()
         }
         .padding(.bottom, 15)
     }
     
-    private func topScroll() -> some View {
+    private func blocksScroll() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { value in
                 HStack {
@@ -48,20 +48,21 @@ struct ScrollsView: View {
                         .padding(.trailing, 15)
                     }
                             .onChange(of: viewModel.currentId) { _ in
-                                viewModel.scrollToDestanation(value: value, position: viewModel.currentId)
+                                viewModel.scrollTo(value: value, position: viewModel.currentId)
                             }
                 }
             }
         }
     }
     
-    private func bottomScroll() -> some View {
+    private func cardsScroll() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             ScrollViewReader { value in
+                // 1
                 GeometryReader { geometry in
                     Color.clear.preference(
-                        key: ScrollOffsetPreferenceKey.self,
-                        value: geometry.frame(in: .named("scrollView")).origin
+                        key: ScrollPreferenceKey.self,
+                        value: geometry.frame(in: .global).origin
                     )
                 }.frame(width: 0, height: 0)
                 HStack {
@@ -75,13 +76,12 @@ struct ScrollsView: View {
                         }
                     }
                             .onChange(of: viewModel.scrollTriger) { _ in
-                                viewModel.scrollToDestanation(value: value, position: viewModel.currentId)
+                                viewModel.scrollTo(value: value, position: viewModel.currentId)
                             }
                 }
             }
         }
-        .coordinateSpace(name: "scrollView")
-        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { value in
+        .onPreferenceChange(ScrollPreferenceKey.self) { value in
             viewModel.onPreferenceChangeHelper(value: value)
         }
     }

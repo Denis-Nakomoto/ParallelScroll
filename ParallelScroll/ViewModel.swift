@@ -7,26 +7,32 @@
 
 import SwiftUI
 
+struct ScrollPreferenceKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {}
+}
+
 final class ViewModel: ObservableObject {
     var step: Int?
     var scrollWidth: Int?
     var cardsPosition: [Int] = []
-    var educutionCardsIds: [Int] = []
+    var cardsIds: [Int] = []
     var cardModel: ContentModel
     
-    var holdScroll = false
+    var delay = false
     var cardsSorted: [Int: Int] = [:]
     
     @Published var currentPosition = 0
     @Published var currentId = 0
-    // Срабатывет когда нужно прокрутить модули по нажатию кнопки модуля
+    
+    // Triggers when block scroll button is pressed
     var scrollTriger = false {
         didSet {
-            // Чтобы не было дергания верхнего скрола с модулями
-            holdScroll = true
+            // This delay is added to have top scroll swith onece and no to switch all top scroll button one by one
+            delay = true
             _ = Timer.scheduledTimer(withTimeInterval: 0.5,
                                      repeats: false) { timer in
-                self.holdScroll = false
+                self.delay = false
                 timer.invalidate()
             }
         }
@@ -55,45 +61,9 @@ final class ViewModel: ObservableObject {
         fillIndexes(content: cardModel)
     }
     
-    // Подготовливает данные для скролла модулей за карточками
-    func scrollData(currentPosition: CGFloat) -> Int? {
-        if !holdScroll {
-            guard let step = step, let totalWidth = scrollWidth else { return 1 }
-            var newPositionIndex = 0
-            let constantAdd = (totalWidth / 2) - 390
-            let currentDifference = totalWidth - (Int(currentPosition) + constantAdd)
-            if currentDifference > step {
-                newPositionIndex = currentDifference / step
-            }
-            return newPositionIndex
-        }
-        return nil
-    }
-    
-    // Заполняем массив позиций карточек в скролле (полезно когда в две и более каточке на один модуль)
-    func fillIndexes(content: ContentModel) {
-        var blocksCount = 1
-        for element in cardModel.blocks.sorted(by: { $0.id < $1.id }) {
-            for _ in element.contentBlocks {
-                cardsPosition.append(element.position)
-                educutionCardsIds.append(element.id)
-            }
-            cardsSorted[element.id] = blocksCount
-            blocksCount += 1
-        }
-    }
-    
-    // Скролит cкроллы
-    func scrollToDestanation(value: ScrollViewProxy, position: Int) {
-        withAnimation {
-            value.scrollTo(position, anchor: .leading)
-        }
-    }
-    
-    // Тянет строку модулей за карточками
     func onPreferenceChangeHelper(value: CGPoint) {
         if step == nil {
-            scrollWidth = Int(value.x + (value.x - 390))
+            scrollWidth = Int(value.x + (value.x))
             if let width = scrollWidth, width > 0 {
                 let step = width / cardsPosition.count
                 self.step = step
@@ -102,15 +72,41 @@ final class ViewModel: ObservableObject {
         if let currentIndex = scrollData(currentPosition: value.x) {
             if currentIndex <= cardsPosition.count - 1 {
                 currentPosition = cardsPosition[currentIndex]
-                currentId = educutionCardsIds[currentIndex]
+                currentId = cardsIds[currentIndex]
             }
         }
     }
-}
+    
+    func scrollData(currentPosition: CGFloat) -> Int? {
+        if !delay {
+            guard let step = step, let totalWidth = scrollWidth else { return 1 }
+            var newPositionIndex = 0
+            let constantAdd = (totalWidth / 2)
+            let currentDifference = totalWidth - (Int(currentPosition) + constantAdd)
+            if currentDifference > step {
+                newPositionIndex = currentDifference / step
+            }
+            return newPositionIndex
+        }
+        return nil
+    }
+   
+    func fillIndexes(content: ContentModel) {
+        var blocksCount = 1
+        for element in cardModel.blocks.sorted(by: { $0.id < $1.id }) {
+            for _ in element.contentBlocks {
+                cardsPosition.append(element.position)
+                cardsIds.append(element.id)
+            }
+            cardsSorted[element.id] = blocksCount
+            blocksCount += 1
+        }
+    }
 
-//  Сколл helper
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {}
+    func scrollTo(value: ScrollViewProxy, position: Int) {
+        withAnimation {
+            value.scrollTo(position, anchor: .leading)
+        }
+    }
 }
 
